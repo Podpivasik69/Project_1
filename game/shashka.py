@@ -117,6 +117,7 @@ class ShashkaProjectile:
         for platform in platforms:
             if shashka_rect.colliderect(platform.rect if hasattr(platform, 'rect') else platform):
                 self.active = False
+                print(f"🌀 Шашка столкнулась: x={self.position.x:.1f}, y={self.position.y:.1f} с платформой")
                 return True
         
         return False

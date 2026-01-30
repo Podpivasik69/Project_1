@@ -18,6 +18,7 @@ class AssetManager:
         self.images: Dict[str, pygame.Surface] = {}
         self.fonts: Dict[str, pygame.font.Font] = {}
         self.loaded_themes: Dict[str, Dict] = {}
+        self.sounds: Dict[str, pygame.mixer.Sound] = {}  # Добавляем звуки
         
         # Default placeholder colors
         self.placeholder_colors = {
@@ -220,6 +221,17 @@ class AssetManager:
         # Create placeholder if file not found
         color = (100, 50, 25)  # Dark brown for bear
         return self.create_placeholder(size, color, f"BEAR_{state.upper()}")
+    
+    def get_balalaika_sprite(self, size: Tuple[int, int] = (48, 32)) -> pygame.Surface:
+        """Get balalaika sprite."""
+        sprite = self.load_image("assets/balalaika.png", size)
+        
+        if sprite:
+            return sprite
+        
+        # Create placeholder
+        color = (139, 69, 19)  # Brown for wood
+        return self.create_placeholder(size, color, "♪")
     
     def get_bear_walk_frame(self, frame_number: int, size: Tuple[int, int] = (80, 64)) -> pygame.Surface:
         """
@@ -439,7 +451,43 @@ class AssetManager:
         self.images.clear()
         self.fonts.clear()
         self.loaded_themes.clear()
+        self.sounds.clear()
         print("Asset cache cleared")
+    
+    def load_sound(self, path: str) -> Optional[pygame.mixer.Sound]:
+        """
+        Load a sound from file path.
+        
+        Args:
+            path: Path to sound file
+            
+        Returns:
+            Loaded pygame Sound or None if failed
+        """
+        if path in self.sounds:
+            return self.sounds[path]
+        
+        try:
+            if os.path.exists(path):
+                # Инициализируем mixer если не инициализирован
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+                
+                sound = pygame.mixer.Sound(path)
+                self.sounds[path] = sound
+                print(f"Loaded sound: {path}")
+                return sound
+            else:
+                print(f"Sound not found: {path}")
+                return None
+                
+        except pygame.error as e:
+            print(f"Failed to load sound {path}: {e}")
+            return None
+    
+    def get_wolf_sound(self) -> Optional[pygame.mixer.Sound]:
+        """Get wolf attack sound."""
+        return self.load_sound("assets/wolf/wolf_sound.mp3")
 
 
 # Global asset manager instance

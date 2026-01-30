@@ -205,9 +205,12 @@ class SimplePlayer:
                 self.active_shashkas.remove(shashka)
                 continue
             
-            # Удаляем шашки за пределами экрана ±100px
-            if shashka.x < -100 or shashka.x > 2100:  # Мир 2000px + буфер
+            # Удаляем шашки за пределами мира с буфером
+            BUFFER_ZONE = 200
+            WORLD_WIDTH = 2000  # Размер игрового мира
+            if shashka.x < -BUFFER_ZONE or shashka.x > WORLD_WIDTH + BUFFER_ZONE:
                 self.active_shashkas.remove(shashka)
+                print(f"🌀 Шашка удалена в player: x={shashka.x:.1f}, причина: граница мира")
     
     def render_shashkas(self, surface: pygame.Surface, camera_offset: Vector2D = None):
         """Рендерит все активные шашки."""

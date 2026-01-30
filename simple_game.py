@@ -11,7 +11,10 @@ from game.physics import Vector2D
 from game.simple_player import SimplePlayer
 from game.simple_wolf import SimpleWolf
 from game.simple_combat import SimpleCombat
+from game.bear_boss import BearBoss
+from game.balalaika import BalalaikaProjectile
 from game.assets import asset_manager
+from game.game_states import GameState, MenuScreen, DeathScreen, ParallaxBackground
 
 
 class Platform:
@@ -80,14 +83,19 @@ class SimpleGame:
         self.TARGET_FPS = 60
         self.GRAVITY = 980.0
         
+        # Состояние игры
+        self.current_state = GameState.MENU
+        self.menu_screen = None
+        self.death_screen = None
+        self.parallax_background = None
+        
         # Игровые объекты
         self.player = None
         self.wolves = []
+        self.bear = None  # Медведь-босс
+        self.balalaikas = []  # Снаряды балалайки
         self.platforms = []
         self.combat_system = SimpleCombat()
-        
-        # Фон
-        self.background = None
         
         # Камера
         self.camera_position = Vector2D(0, 0)
@@ -95,21 +103,26 @@ class SimpleGame:
         
         # Ввод
         self.keys_pressed = set()
+        self.key_events = []
         
         # Отладка
         self.debug_mode = False
+        self.collision_debug = False
     
     def initialize(self) -> bool:
         """Инициализирует игру."""
         try:
             pygame.init()
+            pygame.mixer.init()  # Инициализируем звук
             self.screen = pygame.display.set_mode((self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
             pygame.display.set_caption("Ingushetia Platformer - Simple Version")
             self.clock = pygame.time.Clock()
             self.running = True
             
-            # Создаем игровые объекты
-            self._create_game_objects()
+            # Создаем экраны состояний
+            self.menu_screen = MenuScreen(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+            self.death_screen = DeathScreen(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+            self.parallax_background = ParallaxBackground(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
             
             print("Simple game initialized!")
             print("Controls:")
@@ -118,7 +131,8 @@ class SimpleGame:
             print("  X or CTRL - Attack")
             print("  Z - Throw Shashka")
             print("  F1 - Toggle debug mode")
-            print("  ESC - Quit")
+            print("  F2 - Toggle collision debug")
+            print("  ESC - Quit/Menu")
             
             return True
         except Exception as e:
@@ -155,29 +169,80 @@ class SimpleGame:
         for wolf in self.wolves:
             wolf.set_target(self.player)
         
-        # Загружаем фон
-        self.background = asset_manager.get_background("sky")
+        # Создаем медведя-босса
+        self.bear = BearBoss(self.WINDOW_WIDTH - 150, 200)
+        self.bear.set_target(self.player)
+        self.balalaikas = []  # Сбрасываем снаряды балалайки
     
     def handle_events(self):
         """Обрабатывает события."""
+        self.key_events = []
+        
         for event in pygame.event.get():
+            self.key_events.append(event)
+            
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == pygame.KEYDOWN:
                 self.keys_pressed.add(event.key)
-                if event.key == pygame.K_ESCAPE:
-                    self.running = False
-                elif event.key == pygame.K_F1:
+                
+                # Глобальные клавиши
+                if event.key == pygame.K_F1 and self.current_state == GameState.PLAYING:
                     self.debug_mode = not self.debug_mode
                     print(f"Debug mode: {'ON' if self.debug_mode else 'OFF'}")
-                elif event.key == pygame.K_r and len(self.wolves) == 0:
-                    # Перезапуск игры
-                    self._restart_game()
+                elif event.key == pygame.K_F2 and self.current_state == GameState.PLAYING:
+                    self.collision_debug = not getattr(self, 'collision_debug', False)
+                    print(f"Collision debug: {'ON' if self.collision_debug else 'OFF'}")
+                    
             elif event.type == pygame.KEYUP:
                 self.keys_pressed.discard(event.key)
     
     def update(self, delta_time: float):
-        """Обновляет игру."""
+        """Обновляет игру в зависимости от состояния."""
+        if self.current_state == GameState.MENU:
+            self._update_menu()
+        elif self.current_state == GameState.PLAYING:
+            self._update_game(delta_time)
+        elif self.current_state == GameState.DEATH:
+            self._update_death(delta_time)
+    
+    def _update_menu(self):
+        """Обновляет меню."""
+        action = self.menu_screen.handle_input(self.keys_pressed, self.key_events)
+        
+        if action == "start_game":
+            self._start_new_game()
+        elif action == "exit":
+            self.running = False
+    
+    def _update_death(self, delta_time: float):
+        """Обновляет экран смерти."""
+        self.death_screen.update(delta_time)
+        action = self.death_screen.handle_input(self.keys_pressed, self.key_events)
+        
+        if action == "restart":
+            self._start_new_game()
+        elif action == "main_menu":
+            self.current_state = GameState.MENU
+        elif action == "exit":
+            self.running = False
+    
+    def _start_new_game(self):
+        """Начинает новую игру."""
+        self._create_game_objects()
+        self.current_state = GameState.PLAYING
+        self.camera_position = Vector2D(0, 0)
+        print("🎮 New game started!")
+    
+    def _update_game(self, delta_time: float):
+        """Обновляет основную игру."""
+        # Проверяем смерть игрока
+        if self.player.health <= 0:
+            self.current_state = GameState.DEATH
+            self.death_screen.death_timer = 0.0
+            print("💀 Player died!")
+            return
+        
         # Обрабатываем ввод
         self._handle_input()
         
@@ -218,9 +283,21 @@ class SimpleGame:
                     print("💀 Волк убит шашкой!")
                 continue
             
-            # Проверить выход за экран
-            if shashka.x < -100 or shashka.x > self.WINDOW_WIDTH + 100:
+            # Проверить столкновение с медведем-боссом
+            if self.bear and not self.bear.is_dead:
+                bear_rect = self.bear.get_rect()
+                if shashka.get_rect().colliderect(bear_rect):
+                    self.bear.take_damage(shashka.damage)
+                    self.player.active_shashkas.remove(shashka)
+                    print(f"🎯 Попадание в медведя! Урон: {shashka.damage}")
+                    continue
+            
+            # Проверить выход за экран (мировые координаты с буфером)
+            BUFFER_ZONE = 200
+            WORLD_WIDTH = 2000  # Размер игрового мира
+            if (shashka.x < -BUFFER_ZONE or shashka.x > WORLD_WIDTH + BUFFER_ZONE):
                 self.player.active_shashkas.remove(shashka)
+                print(f"🌀 Шашка удалена: x={shashka.x:.1f}, причина: граница мира")
         
         # Обновляем волков
         for wolf in self.wolves[:]:  # Копия списка для безопасного удаления
@@ -235,22 +312,69 @@ class SimpleGame:
             for platform in self.platforms:
                 wolf.check_platform_collision(platform.rect)
         
+        # Обновляем медведя-босса
+        if self.bear and not self.bear.is_dead:
+            # Обновляем медведя
+            balalaika = self.bear.update(delta_time, (self.player.position.x, self.player.position.y))
+            
+            # Если медведь кинул балалайку
+            if balalaika:
+                self.balalaikas.append(balalaika)
+            
+            # Проверяем коллизии медведя с платформами
+            self.bear.is_grounded = False
+            for platform in self.platforms:
+                self.bear.check_platform_collision(platform.rect)
+        
+        # Обновляем балалайки
+        for balalaika in self.balalaikas[:]:  # Копия списка
+            balalaika.update(delta_time)
+            
+            # Проверяем столкновение с игроком
+            if balalaika.check_player_collision(self.player.get_rect()):
+                self.player.take_damage(balalaika.damage)
+                self.balalaikas.remove(balalaika)
+                print("💥 Игрок получил урон от балалайки!")
+                continue
+            
+            # Удаляем неактивные балалайки
+            if not balalaika.active:
+                self.balalaikas.remove(balalaika)
+        
         # Обрабатываем атаки игрока
         if self.player.input_attack:
             hit_wolves = self.combat_system.perform_attack(self.player, self.wolves, delta_time)
+            
+            # Проверяем атаку по медведю
+            if self.bear and not self.bear.is_dead:
+                bear_rect = self.bear.get_rect()
+                attack_rect = self.combat_system.get_attack_rect(self.player)
+                if attack_rect and attack_rect.colliderect(bear_rect):
+                    self.bear.take_damage(self.combat_system.damage)
+                    print(f"⚔️ Ближняя атака по медведю! Урон: {self.combat_system.damage}")
         
         # Проверяем победу
-        if len(self.wolves) == 0:
+        all_enemies_dead = (len(self.wolves) == 0 and 
+                           (not self.bear or self.bear.is_dead))
+        if all_enemies_dead:
             self._show_victory_message()
         
         # Обновляем камеру
         self._update_camera(delta_time)
         
+        # Обновляем параллакс
+        self.parallax_background.update(self.camera_position.x)
+        
         # Проверяем границы мира
         self._check_world_bounds()
     
     def _handle_input(self):
-        """Обрабатывает ввод."""
+        """Обрабатывает ввод в игре."""
+        # Проверяем ESC для выхода в меню
+        if pygame.K_ESCAPE in self.keys_pressed:
+            self.current_state = GameState.MENU
+            return
+        
         # Горизонтальное движение
         horizontal = 0.0
         if pygame.K_a in self.keys_pressed or pygame.K_LEFT in self.keys_pressed:
@@ -271,7 +395,8 @@ class SimpleGame:
         # Метание шашки
         throw_shashka = pygame.K_z in self.keys_pressed
         
-        self.player.set_input(horizontal, jump, attack, throw_shashka)
+        if self.player:
+            self.player.set_input(horizontal, jump, attack, throw_shashka)
     
     def _update_camera(self, delta_time: float):
         """Обновляет позицию камеры."""
@@ -289,12 +414,18 @@ class SimpleGame:
     
     def _check_world_bounds(self):
         """Проверяет границы мира."""
-        # Если игрок упал слишком низко, возрождаем его
+        if not self.player:
+            return
+            
+        # Если игрок упал слишком низко, наносим урон
         if self.player.position.y > 800:
-            self.player.position = Vector2D(100, 300)
-            self.player.velocity = Vector2D(0, 0)
-            self.player.health = self.player.max_health
-            print("💀 Player respawned!")
+            self.player.take_damage(50)  # Урон от падения
+            if self.player.health > 0:
+                # Возрождаем если еще жив
+                self.player.position = Vector2D(100, 300)
+                self.player.velocity = Vector2D(0, 0)
+                print("💀 Player fell! Respawning...")
+            # Если мертв, состояние изменится в _update_game
     
     def _show_victory_message(self):
         """Показывает сообщение о победе."""
@@ -328,45 +459,64 @@ class SimpleGame:
             self.screen.blit(restart_text, restart_rect)
     
     def render(self):
-        """Рендерит игру."""
-        # Рендерим фон
-        if self.background:
-            # Масштабируем фон под размер экрана
-            bg_scaled = pygame.transform.scale(self.background, (self.WINDOW_WIDTH, self.WINDOW_HEIGHT))
-            self.screen.blit(bg_scaled, (0, 0))
-        else:
-            # Очищаем экран небесно-голубым цветом
-            self.screen.fill((135, 206, 235))
+        """Рендерит игру в зависимости от состояния."""
+        if self.current_state == GameState.MENU:
+            self.menu_screen.render(self.screen)
+        elif self.current_state == GameState.PLAYING:
+            self._render_game()
+        elif self.current_state == GameState.DEATH:
+            # Рендерим игру на фоне, затем экран смерти
+            self._render_game()
+            self.death_screen.render(self.screen)
+        
+        # Обновляем экран
+        pygame.display.flip()
+    
+    def _render_game(self):
+        """Рендерит основную игру."""
+        # Рендерим параллакс фон
+        self.parallax_background.render(self.screen)
         
         # Рендерим платформы
         for platform in self.platforms:
             platform.render(self.screen, self.camera_position)
         
         # Рендерим игрока
-        self.player.render(self.screen, self.camera_position, self.debug_mode)
-        
-        # Рендерим шашки игрока
-        self.player.render_shashkas(self.screen, self.camera_position)
+        if self.player:
+            self.player.render(self.screen, self.camera_position, self.debug_mode)
+            
+            # Рендерим шашки игрока
+            self.player.render_shashkas(self.screen, self.camera_position)
         
         # Рендерим оружие игрока
-        self.combat_system.render_weapon(self.screen, self.player, self.camera_position)
+        if self.player:
+            self.combat_system.render_weapon(self.screen, self.player, self.camera_position)
         
         # Рендерим волков
         for wolf in self.wolves:
             wolf.render(self.screen, self.camera_position)
         
+        # Рендерим медведя-босса
+        if self.bear and not self.bear.is_dead:
+            self.bear.render(self.screen, self.camera_position)
+        
+        # Рендерим балалайки
+        for balalaika in self.balalaikas:
+            balalaika.draw(self.screen, self.camera_position)
+        
         # Отладочная информация
         if self.debug_mode:
             self._render_debug_info()
+        
+        # Отладка коллизий
+        if getattr(self, 'collision_debug', False):
+            self._render_collision_debug()
         
         # Рендерим UI
         self._render_ui()
         
         # Рендерим экран победы если нужно
         self._render_victory_screen()
-        
-        # Обновляем экран
-        pygame.display.flip()
     
     def _render_debug_info(self):
         """Рендерит отладочную информацию."""
@@ -402,8 +552,125 @@ class SimpleGame:
         # Рендерим области атаки
         self.combat_system.render_attack_area(self.screen, self.player, self.camera_position, True)
     
+    def _render_collision_debug(self):
+        """Рендерит отладку коллизий."""
+        if not self.player:
+            return
+        
+        # Константы границ
+        BUFFER_ZONE = 200
+        WORLD_WIDTH = 2000
+        
+        # Рендерим границы мира
+        left_boundary = -BUFFER_ZONE - self.camera_position.x
+        right_boundary = WORLD_WIDTH + BUFFER_ZONE - self.camera_position.x
+        
+        # Левая граница (красная линия)
+        if left_boundary > -50 and left_boundary < self.WINDOW_WIDTH + 50:
+            pygame.draw.line(self.screen, (255, 0, 0), 
+                           (int(left_boundary), 0), 
+                           (int(left_boundary), self.WINDOW_HEIGHT), 3)
+            
+            # Подпись
+            font = pygame.font.Font(None, 24)
+            text = font.render(f"LEFT BOUNDARY ({-BUFFER_ZONE})", True, (255, 0, 0))
+            self.screen.blit(text, (int(left_boundary) + 5, 50))
+        
+        # Правая граница (красная линия)
+        if right_boundary > -50 and right_boundary < self.WINDOW_WIDTH + 50:
+            pygame.draw.line(self.screen, (255, 0, 0), 
+                           (int(right_boundary), 0), 
+                           (int(right_boundary), self.WINDOW_HEIGHT), 3)
+            
+            # Подпись
+            font = pygame.font.Font(None, 24)
+            text = font.render(f"RIGHT BOUNDARY ({WORLD_WIDTH + BUFFER_ZONE})", True, (255, 0, 0))
+            self.screen.blit(text, (int(right_boundary) - 200, 50))
+        
+        # Рендерим коллизии шашек
+        for shashka in self.player.active_shashkas:
+            shashka_rect = shashka.get_rect()
+            screen_rect = pygame.Rect(
+                int(shashka_rect.x - self.camera_position.x),
+                int(shashka_rect.y - self.camera_position.y),
+                shashka_rect.width,
+                shashka_rect.height
+            )
+            
+            # Рамка шашки (зеленая если активна)
+            color = (0, 255, 0) if shashka.active else (255, 0, 0)
+            pygame.draw.rect(self.screen, color, screen_rect, 2)
+            
+            # Координаты шашки
+            font = pygame.font.Font(None, 20)
+            coord_text = font.render(f"({shashka.position.x:.0f},{shashka.position.y:.0f})", True, color)
+            self.screen.blit(coord_text, (screen_rect.x, screen_rect.y - 20))
+        
+        # Рендерим коллизии платформ
+        for platform in self.platforms:
+            platform_rect = platform.rect
+            screen_rect = pygame.Rect(
+                int(platform_rect.x - self.camera_position.x),
+                int(platform_rect.y - self.camera_position.y),
+                platform_rect.width,
+                platform_rect.height
+            )
+            
+            # Рамка платформы (синяя)
+            pygame.draw.rect(self.screen, (0, 0, 255), screen_rect, 1)
+        
+        # Рендерим коллизии медведя
+        if self.bear and not self.bear.is_dead:
+            bear_rect = self.bear.get_rect()
+            screen_rect = pygame.Rect(
+                int(bear_rect.x - self.camera_position.x),
+                int(bear_rect.y - self.camera_position.y),
+                bear_rect.width,
+                bear_rect.height
+            )
+            
+            # Рамка медведя (оранжевая)
+            pygame.draw.rect(self.screen, (255, 165, 0), screen_rect, 2)
+            
+            # Состояние медведя
+            font = pygame.font.Font(None, 16)
+            state_text = font.render(f"Bear: {self.bear.state}", True, (255, 165, 0))
+            self.screen.blit(state_text, (screen_rect.x, screen_rect.y - 20))
+        
+        # Рендерим коллизии балалаек
+        for balalaika in self.balalaikas:
+            balalaika_rect = balalaika.get_rect()
+            screen_rect = pygame.Rect(
+                int(balalaika_rect.x - self.camera_position.x),
+                int(balalaika_rect.y - self.camera_position.y),
+                balalaika_rect.width,
+                balalaika_rect.height
+            )
+            
+            # Рамка балалайки (фиолетовая)
+            color = (255, 0, 255) if balalaika.active else (128, 0, 128)
+            pygame.draw.rect(self.screen, color, screen_rect, 2)
+        
+        # Информация о границах
+        info_font = pygame.font.Font(None, 24)
+        info_texts = [
+            f"Camera X: {self.camera_position.x:.1f}",
+            f"World boundaries: {-BUFFER_ZONE} to {WORLD_WIDTH + BUFFER_ZONE}",
+            f"Active shashkas: {len(self.player.active_shashkas)}",
+            f"Active balalaikas: {len(self.balalaikas)}",
+            f"Bear alive: {self.bear and not self.bear.is_dead}",
+            "F2 - Toggle collision debug"
+        ]
+        
+        for i, text in enumerate(info_texts):
+            rendered = info_font.render(text, True, (255, 255, 0))
+            self.screen.blit(rendered, (10, 200 + i * 25))
+    
     def _render_ui(self):
         """Рендерит пользовательский интерфейс."""
+        if not self.player:
+            return
+            
         font = pygame.font.Font(None, 36)
         
         # FPS
@@ -411,9 +678,15 @@ class SimpleGame:
         fps_text = font.render(f"FPS: {fps:.1f}", True, (255, 255, 0))
         self.screen.blit(fps_text, (self.WINDOW_WIDTH - 150, 10))
         
-        # Счетчик волков
-        wolves_text = font.render(f"Wolves: {len(self.wolves)}", True, (255, 255, 255))
-        self.screen.blit(wolves_text, (10, 10))
+        # Счетчик врагов
+        total_enemies = len(self.wolves) + (1 if self.bear and not self.bear.is_dead else 0)
+        enemies_text = font.render(f"Enemies: {total_enemies}", True, (255, 255, 255))
+        self.screen.blit(enemies_text, (10, 10))
+        
+        # Информация о медведе-боссе
+        if self.bear and not self.bear.is_dead:
+            bear_health_text = font.render(f"Boss HP: {self.bear.health}/{self.bear.max_health}", True, (255, 100, 0))
+            self.screen.blit(bear_health_text, (10, 160))
         
         # Здоровье игрока (большое)
         health_text = font.render(f"Health: {self.player.health}/{self.player.max_health}", True, (255, 255, 255))
@@ -456,12 +729,6 @@ class SimpleGame:
             
             # Рамка
             pygame.draw.rect(self.screen, (255, 255, 255), bg_rect, 1)
-    
-    def _restart_game(self):
-        """Перезапускает игру."""
-        print("🔄 Restarting game...")
-        self.victory_shown = False
-        self._create_game_objects()
     
     async def run(self):
         """Основной игровой цикл."""

@@ -98,6 +98,12 @@ class SimpleCombat:
         
         return pygame.Rect(int(attack_x), int(attack_y), int(attack_width), int(attack_height))
     
+    def get_attack_rect(self, attacker) -> Optional[pygame.Rect]:
+        """Возвращает прямоугольник атаки если атакующий атакует."""
+        if hasattr(attacker, 'is_attacking') and attacker.is_attacking:
+            return self._get_attack_area(attacker)
+        return None
+    
     def render_weapon(self, surface: pygame.Surface, attacker, camera_offset: Vector2D = None):
         """Рендерит оружие при атаке."""
         if not hasattr(attacker, 'is_attacking') or not attacker.is_attacking:

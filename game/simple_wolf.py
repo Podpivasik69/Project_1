@@ -59,6 +59,9 @@ class SimpleWolf:
         
         # Загружаем спрайты
         self.sprites = self._load_sprites()
+        
+        # Загружаем звук атаки
+        self.attack_sound = asset_manager.get_wolf_sound()
     
     def _load_sprites(self) -> Dict[str, pygame.Surface]:
         """Загружает все спрайты волка."""
@@ -172,6 +175,11 @@ class SimpleWolf:
                     not player_above_wolf):
                     
                     self.target.take_damage(self.attack_damage)
+                    
+                    # Воспроизводим звук атаки
+                    if self.attack_sound:
+                        self.attack_sound.play()
+                    
                     print(f"🐺 Wolf attacks for {self.attack_damage} damage!")
             
             self.last_attack_time = 0.0
