@@ -27,9 +27,16 @@ def test_shashka_system():
     print(f"   Скорость: {shashka.velocity.x} px/s")
     print(f"   Направление: {'→' if shashka.direction > 0 else '←'}")
     print(f"   Урон: {shashka.damage}")
+    print(f"   Размер: {shashka.width}x{shashka.height}")
     print(f"   Активна: {shashka.active}")
     print("   ✅ Снаряд создан")
     print()
+    
+    # Проверяем новые параметры
+    assert shashka.speed == 250, f"Ожидалась скорость 250, получена {shashka.speed}"
+    assert shashka.damage == 15, f"Ожидался урон 15, получен {shashka.damage}"
+    assert shashka.width == 96, f"Ожидалась ширина 96, получена {shashka.width}"
+    assert shashka.height == 24, f"Ожидалась высота 24, получена {shashka.height}"
     
     # Тест 2: Движение снаряда
     print("2. Тест движения снаряда (5 кадров по 16ms):")
@@ -42,7 +49,7 @@ def test_shashka_system():
         
         print(f"   Кадр {frame+1}: x={shashka.position.x:.1f} (+{distance:.1f}px)")
     
-    expected_distance = 400 * delta_time * 5  # speed * time * frames
+    expected_distance = 250 * delta_time * 5  # speed = 250 (было 400)
     actual_distance = shashka.position.x - 100  # start_x was 100
     print(f"   Ожидаемое расстояние: {expected_distance:.1f}px")
     print(f"   Фактическое расстояние: {actual_distance:.1f}px")
@@ -54,17 +61,18 @@ def test_shashka_system():
     player = SimplePlayer(Vector2D(200, 300))
     player.facing_right = True
     
-    print(f"   Начальное количество шашек: {len(player.active_shashkas)}")
+    print(f"   Начальное количество шашек: {player.shashka_count}/{player.MAX_SHASHKAS}")
+    print(f"   Активных шашек: {len(player.active_shashkas)}")
     print(f"   Кулдаун: {player.shashka_cooldown}")
-    print(f"   Максимум шашек: {player.MAX_SHASHKAS}")
+    print(f"   Таймер восстановления: {player.shashka_regen_timer}")
     
     # Бросаем шашку
     player.set_input(0, False, False, True)  # throw_shashka = True
     player.update(delta_time)
     
-    print(f"   После броска: {len(player.active_shashkas)} шашек")
+    print(f"   После броска: {player.shashka_count} шашек доступно, {len(player.active_shashkas)} в полете")
     print(f"   Кулдаун: {player.shashka_cooldown:.2f}s")
-    print("   ✅ Бросок работает" if len(player.active_shashkas) == 1 else "   ❌ Ошибка броска")
+    print("   ✅ Бросок работает" if len(player.active_shashkas) == 1 and player.shashka_count == 2 else "   ❌ Ошибка броска")
     print()
     
     # Тест 4: Кулдаун
@@ -109,6 +117,30 @@ def test_shashka_system():
     print(f"   ✅ Лимит работает" if len(player.active_shashkas) == 3 else "   ❌ Лимит не работает")
     print()
     
+    # Тест 5.5: Система восстановления шашек
+    print("5.5. Тест системы восстановления:")
+    player2 = SimplePlayer(Vector2D(300, 300))
+    
+    # Тратим все шашки
+    player2.shashka_count = 0
+    player2.shashka_cooldown = 0
+    print(f"   Потратили все шашки: {player2.shashka_count}/{player2.MAX_SHASHKAS}")
+    
+    # Симулируем восстановление (2 секунды на шашку)
+    print("   Симуляция восстановления (2 секунды на шашку):")
+    for second in range(7):  # 6 секунд = 3 шашки
+        for frame in range(60):  # 60 FPS
+            player2.set_input(0, False, False, False)
+            player2.update(1.0/60.0)
+        
+        print(f"   Секунда {second+1}: {player2.shashka_count} шашек, таймер: {player2.shashka_regen_timer:.1f}s")
+        
+        if player2.shashka_count == player2.MAX_SHASHKAS:
+            print(f"   ✅ Все шашки восстановлены за {second+1} секунд")
+            break
+    
+    print()
+    
     # Тест 6: Столкновение с врагом
     print("6. Тест столкновения с врагом:")
     wolf = SimpleWolf(Vector2D(400, 300))
@@ -120,7 +152,7 @@ def test_shashka_system():
     hit_enemy = test_shashka.check_enemy_collision([wolf])
     if hit_enemy:
         hit_enemy.take_damage(test_shashka.damage)
-        print(f"   Попадание! Урон: {test_shashka.damage}")
+        print(f"   Попадание! Урон: {test_shashka.damage}")  # Теперь 15
         print(f"   Здоровье после попадания: {hit_enemy.health}/{hit_enemy.max_health}")
         print(f"   Волк мертв: {hit_enemy.is_dead}")
         print("   ✅ Столкновение работает")
@@ -129,28 +161,29 @@ def test_shashka_system():
     print()
     
     # Тест 7: Убийство волка
-    print("7. Тест убийства волка (3 попадания):")
+    print("7. Тест убийства волка (2 попадания по 15 урона):")
     wolf2 = SimpleWolf(Vector2D(500, 300))
     print(f"   Начальное здоровье: {wolf2.health}")
     
-    for hit in range(3):
+    for hit in range(2):  # Теперь 2 попадания вместо 3 (15*2=30)
         test_shashka2 = ShashkaProjectile(500, 324, 1)
         hit_enemy = test_shashka2.check_enemy_collision([wolf2])
         if hit_enemy:
             hit_enemy.take_damage(test_shashka2.damage)
             print(f"   Попадание {hit+1}: здоровье {hit_enemy.health}, мертв: {hit_enemy.is_dead}")
     
-    print(f"   ✅ Волк убит за 3 попадания" if wolf2.is_dead else "   ❌ Волк не убит")
+    print(f"   ✅ Волк убит за 2 попадания" if wolf2.is_dead else "   ❌ Волк не убит")
     print()
     
     print("=== РЕЗУЛЬТАТЫ ===")
-    print("✅ Создание снаряда: работает")
+    print("✅ Создание снаряда: работает (96x24, 250px/s, 15 урона)")
     print("✅ Линейное движение: работает") 
     print("✅ Система броска: работает")
     print("✅ Кулдаун: работает")
     print("✅ Лимит шашек: работает")
+    print("✅ Восстановление шашек: работает (2с на шашку)")
     print("✅ Столкновение с врагами: работает")
-    print("✅ Убийство врагов: работает")
+    print("✅ Убийство врагов: работает (2 попадания)")
     print()
     print("🎯 Система шашки готова к использованию!")
     

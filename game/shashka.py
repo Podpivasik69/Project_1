@@ -23,18 +23,18 @@ class ShashkaProjectile:
         self.position = Vector2D(start_x, start_y)
         
         # ПАРАМЕТРЫ
-        self.speed = 400  # пикселей/секунду
+        self.speed = 250  # пикселей/секунду (было 400)
         self.direction = direction
         self.velocity = Vector2D(self.speed * direction, 0)  # Только горизонтально
         
         # Свойства
-        self.damage = 10
+        self.damage = 15  # урон (было 10)
         self.active = True
         self.lifetime = 0.0  # Для безопасности
         
-        # Размер для коллизий
-        self.width = 32
-        self.height = 8
+        # Размер для коллизий (увеличен еще в 1.5 раза)
+        self.width = 96   # было 64, стало 64 * 1.5 = 96
+        self.height = 24  # было 16, стало 16 * 1.5 = 24
         
         # Загружаем спрайт
         self.sprite = self._load_sprite()

@@ -419,14 +419,43 @@ class SimpleGame:
         health_text = font.render(f"Health: {self.player.health}/{self.player.max_health}", True, (255, 255, 255))
         self.screen.blit(health_text, (self.WINDOW_WIDTH // 2 - 100, 10))
         
-        # Количество шашек в полете
-        shashkas_text = font.render(f"Shashkas: {len(self.player.active_shashkas)}/{self.player.MAX_SHASHKAS}", True, (255, 255, 255))
+        # Количество шашек и восстановление
+        shashkas_text = font.render(f"Shashkas: {self.player.shashka_count}/{self.player.MAX_SHASHKAS}", True, (255, 255, 255))
         self.screen.blit(shashkas_text, (10, 50))
+        
+        # Активные шашки в полете
+        active_text = font.render(f"In flight: {len(self.player.active_shashkas)}", True, (200, 200, 200))
+        self.screen.blit(active_text, (10, 75))
         
         # Кулдаун шашки
         if self.player.shashka_cooldown > 0:
             cooldown_text = font.render(f"Cooldown: {self.player.shashka_cooldown:.1f}s", True, (255, 255, 0))
-            self.screen.blit(cooldown_text, (10, 80))
+            self.screen.blit(cooldown_text, (10, 100))
+        
+        # Восстановление шашек
+        if self.player.shashka_count < self.player.MAX_SHASHKAS:
+            regen_progress = self.player.shashka_regen_timer / self.player.SHASHKA_REGEN_TIME
+            regen_text = font.render(f"Regen: {regen_progress*100:.0f}%", True, (0, 255, 255))
+            self.screen.blit(regen_text, (10, 125))
+            
+            # Полоска прогресса восстановления
+            bar_width = 100
+            bar_height = 8
+            bar_x = 150
+            bar_y = 130
+            
+            # Фон полоски
+            bg_rect = pygame.Rect(bar_x, bar_y, bar_width, bar_height)
+            pygame.draw.rect(self.screen, (100, 100, 100), bg_rect)
+            
+            # Прогресс
+            progress_width = int(bar_width * regen_progress)
+            if progress_width > 0:
+                progress_rect = pygame.Rect(bar_x, bar_y, progress_width, bar_height)
+                pygame.draw.rect(self.screen, (0, 255, 255), progress_rect)
+            
+            # Рамка
+            pygame.draw.rect(self.screen, (255, 255, 255), bg_rect, 1)
     
     def _restart_game(self):
         """Перезапускает игру."""

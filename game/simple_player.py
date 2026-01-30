@@ -43,6 +43,11 @@ class SimplePlayer:
         self.SHASHKA_COOLDOWN = 0.5  # 500ms задержка
         self.MAX_SHASHKAS = 3        # макс 3 в полёте одновременно
         
+        # Система восстановления шашек
+        self.shashka_count = 3       # Текущее количество доступных шашек
+        self.shashka_regen_timer = 0.0  # Таймер восстановления
+        self.SHASHKA_REGEN_TIME = 2.0   # 2 секунды на восстановление одной шашки
+        
         # Анимация
         self.animation_timer = 0.0
         self.animation_speed = 8.0  # кадров в секунду
@@ -122,6 +127,9 @@ class SimplePlayer:
         if self.shashka_cooldown > 0:
             self.shashka_cooldown -= delta_time
         
+        # Обновляем систему восстановления шашек
+        self._update_shashka_regeneration(delta_time)
+        
         # Обрабатываем метание шашки
         self._handle_shashka_throwing()
         
@@ -156,11 +164,12 @@ class SimplePlayer:
         """Обрабатывает метание шашки."""
         if (self.input_throw_shashka and 
             self.shashka_cooldown <= 0 and 
+            self.shashka_count > 0 and  # Проверяем наличие шашек
             len(self.active_shashkas) < self.MAX_SHASHKAS):
             
             # Создать шашку из центра игрока
             player_rect = self.get_rect()
-            start_x = player_rect.centerx + (20 * (1 if self.facing_right else -1))
+            start_x = player_rect.centerx + (40 * (1 if self.facing_right else -1))  # Было 20, стало 40
             start_y = player_rect.centery
             direction = 1 if self.facing_right else -1
             
@@ -168,7 +177,23 @@ class SimplePlayer:
             self.active_shashkas.append(new_shashka)
             self.shashka_cooldown = self.SHASHKA_COOLDOWN
             
-            print(f"🗡️ Шашка брошена! Направление: {'→' if self.facing_right else '←'}")
+            # Тратим шашку
+            self.shashka_count -= 1
+            
+            print(f"🗡️ Шашка брошена! Направление: {'→' if self.facing_right else '←'} (осталось: {self.shashka_count})")
+    
+    def _update_shashka_regeneration(self, delta_time: float):
+        """Обновляет систему восстановления шашек."""
+        if self.shashka_count < self.MAX_SHASHKAS:
+            self.shashka_regen_timer += delta_time
+            
+            if self.shashka_regen_timer >= self.SHASHKA_REGEN_TIME:
+                self.shashka_count += 1
+                self.shashka_regen_timer = 0.0
+                print(f"⚡ Шашка восстановлена! Доступно: {self.shashka_count}/{self.MAX_SHASHKAS}")
+        else:
+            # Если все шашки есть, сбрасываем таймер
+            self.shashka_regen_timer = 0.0
     
     def _update_shashkas(self, delta_time: float):
         """Обновляет все активные шашки."""
