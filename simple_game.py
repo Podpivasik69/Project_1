@@ -116,6 +116,7 @@ class SimpleGame:
             print("  WASD or Arrow Keys - Move")
             print("  SPACE - Jump")
             print("  X or CTRL - Attack")
+            print("  Z - Throw Shashka")
             print("  F1 - Toggle debug mode")
             print("  ESC - Quit")
             
@@ -184,9 +185,42 @@ class SimpleGame:
         self.player.update(delta_time)
         
         # Проверяем коллизии игрока с платформами
-        self.player.is_grounded = False
         for platform in self.platforms:
             self.player.check_platform_collision(platform.rect)
+        
+        # Проверяем, стоит ли игрок на земле (после всех коллизий)
+        platform_rects = [platform.rect for platform in self.platforms]
+        if not self.player.check_if_on_ground(platform_rects) and self.player.is_grounded:
+            # Игрок больше не на земле
+            self.player.is_grounded = False
+        
+        # Обрабатываем шашки игрока
+        for shashka in self.player.active_shashkas[:]:  # Копия списка
+            shashka.update(delta_time)
+            
+            # Проверить столкновение с платформами
+            if shashka.check_collision(self.platforms):
+                self.player.active_shashkas.remove(shashka)
+                print("💥 Шашка попала в платформу!")
+                continue
+            
+            # Проверить столкновение с врагами
+            hit_enemy = shashka.check_enemy_collision(self.wolves)
+            if hit_enemy:
+                # Наносим урон
+                hit_enemy.take_damage(shashka.damage)
+                self.player.active_shashkas.remove(shashka)
+                print(f"🎯 Попадание! Урон: {shashka.damage}, здоровье врага: {hit_enemy.health}")
+                
+                # Проверить смерть волка
+                if hit_enemy.health <= 0:
+                    self.wolves.remove(hit_enemy)
+                    print("💀 Волк убит шашкой!")
+                continue
+            
+            # Проверить выход за экран
+            if shashka.x < -100 or shashka.x > self.WINDOW_WIDTH + 100:
+                self.player.active_shashkas.remove(shashka)
         
         # Обновляем волков
         for wolf in self.wolves[:]:  # Копия списка для безопасного удаления
@@ -234,7 +268,10 @@ class SimpleGame:
                  pygame.K_LCTRL in self.keys_pressed or
                  pygame.K_RCTRL in self.keys_pressed)
         
-        self.player.set_input(horizontal, jump, attack)
+        # Метание шашки
+        throw_shashka = pygame.K_z in self.keys_pressed
+        
+        self.player.set_input(horizontal, jump, attack, throw_shashka)
     
     def _update_camera(self, delta_time: float):
         """Обновляет позицию камеры."""
@@ -306,7 +343,10 @@ class SimpleGame:
             platform.render(self.screen, self.camera_position)
         
         # Рендерим игрока
-        self.player.render(self.screen, self.camera_position)
+        self.player.render(self.screen, self.camera_position, self.debug_mode)
+        
+        # Рендерим шашки игрока
+        self.player.render_shashkas(self.screen, self.camera_position)
         
         # Рендерим оружие игрока
         self.combat_system.render_weapon(self.screen, self.player, self.camera_position)
@@ -332,18 +372,30 @@ class SimpleGame:
         """Рендерит отладочную информацию."""
         font = pygame.font.Font(None, 24)
         
+        # Эффективное состояние "на земле"
+        effective_on_ground = self.player.is_grounded and self.player.in_air_frames < 3
+        
         debug_info = [
             f"Player Pos: ({self.player.position.x:.1f}, {self.player.position.y:.1f})",
             f"Player Vel: ({self.player.velocity.x:.1f}, {self.player.velocity.y:.1f})",
             f"Player State: {self.player.current_state}",
             f"Grounded: {self.player.is_grounded}",
+            f"Effective Grounded: {effective_on_ground}",
+            f"In Air Frames: {self.player.in_air_frames}",
             f"Wolves: {len(self.wolves)}",
             f"Camera: ({self.camera_position.x:.1f}, {self.camera_position.y:.1f})",
         ]
         
         y_offset = 50
         for info in debug_info:
-            text_surface = font.render(info, True, (255, 255, 255))
+            # Цветовая индикация проблем
+            color = (255, 255, 255)
+            if "Effective Grounded: False" in info and self.player.is_grounded:
+                color = (255, 255, 0)  # Желтый - потенциальная проблема
+            elif "In Air Frames:" in info and self.player.in_air_frames > 3 and self.player.is_grounded:
+                color = (255, 150, 0)  # Оранжевый - нестабильность
+            
+            text_surface = font.render(info, True, color)
             self.screen.blit(text_surface, (10, y_offset))
             y_offset += 25
         
@@ -366,6 +418,15 @@ class SimpleGame:
         # Здоровье игрока (большое)
         health_text = font.render(f"Health: {self.player.health}/{self.player.max_health}", True, (255, 255, 255))
         self.screen.blit(health_text, (self.WINDOW_WIDTH // 2 - 100, 10))
+        
+        # Количество шашек в полете
+        shashkas_text = font.render(f"Shashkas: {len(self.player.active_shashkas)}/{self.player.MAX_SHASHKAS}", True, (255, 255, 255))
+        self.screen.blit(shashkas_text, (10, 50))
+        
+        # Кулдаун шашки
+        if self.player.shashka_cooldown > 0:
+            cooldown_text = font.render(f"Cooldown: {self.player.shashka_cooldown:.1f}s", True, (255, 255, 0))
+            self.screen.blit(cooldown_text, (10, 80))
     
     def _restart_game(self):
         """Перезапускает игру."""

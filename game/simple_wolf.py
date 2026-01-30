@@ -50,8 +50,8 @@ class SimpleWolf:
         self.current_frame = 0
         
         # Здоровье
-        self.health = 50
-        self.max_health = 50
+        self.health = 30  # Изменено с 50 на 30 для системы шашки
+        self.max_health = 30
         self.is_dead = False
         
         # Цель
