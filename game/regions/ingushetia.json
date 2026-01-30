@@ -1,0 +1,18 @@
+{
+    "name": "Ingushetia",
+    "assets": {
+        "background": "assets/ingushetia/background.png",
+        "platform": "assets/ingushetia/platform.png",
+        "player": "assets/ingushetia/player.png"
+    },
+    "gameplay": {
+        "gravity": 980.0,
+        "jump_force": 400.0,
+        "move_speed": 200.0
+    },
+    "level_generation": {
+        "platform_density": 0.3,
+        "tower_height_range": [100, 300],
+        "architectural_style": "ingush_towers"
+    }
+}

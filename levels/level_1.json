@@ -1,0 +1,138 @@
+{
+  "level_id": "level_1",
+  "name": "Ингушские Башни - Уровень 1",
+  "description": "Первый уровень в башенном комплексе",
+  "world_bounds": {
+    "x": 0,
+    "y": 0,
+    "width": 1280,
+    "height": 720
+  },
+  "player_start_position": {
+    "x": 100,
+    "y": 500
+  },
+  "tilemap_layers": {
+    "ground": {
+      "tile_size": 32,
+      "tiles": [
+        {"x": 0, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 1, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 2, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 3, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 4, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 5, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 6, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 7, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 8, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 9, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 10, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 11, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 12, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 13, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 14, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 15, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 16, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 17, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 18, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 19, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 20, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 21, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 22, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 23, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 24, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 25, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 26, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 27, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 28, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 29, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 30, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 31, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 32, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 33, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 34, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 35, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 36, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 37, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 38, "y": 22, "sprite_id": 0, "has_collision": true},
+        {"x": 39, "y": 22, "sprite_id": 0, "has_collision": true},
+        
+        {"x": 10, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 11, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 12, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 13, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 14, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 15, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 16, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 17, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 18, "y": 18, "sprite_id": 1, "has_collision": true},
+        {"x": 19, "y": 18, "sprite_id": 1, "has_collision": true},
+        
+        {"x": 25, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 26, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 27, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 28, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 29, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 30, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 31, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 32, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 33, "y": 15, "sprite_id": 2, "has_collision": true},
+        {"x": 34, "y": 15, "sprite_id": 2, "has_collision": true}
+      ]
+    }
+  },
+  "spawn_points": [
+    {
+      "position": {"x": 200, "y": 500},
+      "object_type": "enemy",
+      "properties": {"type": "basic", "health": 100}
+    },
+    {
+      "position": {"x": 400, "y": 400},
+      "object_type": "coin",
+      "properties": {"value": 10}
+    },
+    {
+      "position": {"x": 600, "y": 300},
+      "object_type": "coin",
+      "properties": {"value": 10}
+    },
+    {
+      "position": {"x": 800, "y": 200},
+      "object_type": "health_potion",
+      "properties": {"heal_amount": 50}
+    }
+  ],
+  "trigger_zones": [
+    {
+      "position": {"x": 0, "y": 750},
+      "size": {"x": 1280, "y": 50},
+      "trigger_type": "death_zone",
+      "properties": {}
+    },
+    {
+      "position": {"x": 1200, "y": 400},
+      "size": {"x": 80, "y": 200},
+      "trigger_type": "level_exit",
+      "properties": {"next_level": "level_2"}
+    },
+    {
+      "position": {"x": 500, "y": 500},
+      "size": {"x": 64, "y": 64},
+      "trigger_type": "checkpoint",
+      "properties": {"checkpoint_id": "cp_1"}
+    }
+  ],
+  "parallax_layers": [
+    {
+      "sprite_path": "assets/backgrounds/mountains_far.png",
+      "parallax_factor": 0.2,
+      "initial_position": {"x": 0, "y": 0}
+    },
+    {
+      "sprite_path": "assets/backgrounds/mountains_near.png", 
+      "parallax_factor": 0.5,
+      "initial_position": {"x": 0, "y": 100}
+    }
+  ]
+}
